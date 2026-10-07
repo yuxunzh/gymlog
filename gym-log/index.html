@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>健身记录</title>
+  <meta name="description" content="按日期记录每天健身的部位、动作、重量与次数，内置动作库，支持手机安装与离线使用">
+  <meta name="theme-color" content="#0b1220">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icon-192.png">
+  <link rel="apple-touch-icon" href="icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="健身记录">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-icon">🏋️</span>
+      <div class="brand-text">
+        <h1>健身记录</h1>
+        <p>点一下就能记录，不用再打字</p>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- ========== 记录 ========== -->
+    <section id="view-record" class="view active">
+      <div id="install-banner" class="install-banner hidden">
+        <div class="ib-text">
+          <span class="ib-title">把它装成手机 App</span>
+          安装后有独立图标、全屏无浏览器边框，断网也能用
+        </div>
+        <div class="ib-actions">
+          <button id="banner-install" class="mini-btn accent" type="button">安装</button>
+          <button id="banner-close" class="mini-btn" type="button">稍后</button>
+        </div>
+      </div>
+
+      <div class="date-nav card">
+        <button id="prev-day" class="icon-btn" aria-label="前一天">‹</button>
+        <input type="date" id="date-input" aria-label="选择日期">
+        <button id="next-day" class="icon-btn" aria-label="后一天">›</button>
+      </div>
+
+      <div class="card hidden" id="quick-card">
+        <h2 class="card-title">我的常练动作（点一下直接记上）</h2>
+        <p class="hint">自动按你的训练频率排序，重量和组数沿用上一次，点一下即可保存到当前日期。</p>
+        <div id="quick-list"></div>
+        <button id="repeat-last" type="button" class="ghost-btn">📋 复制上次训练到这一天</button>
+      </div>
+
+      <div id="record-list"></div>
+      <div id="empty-state" class="empty-state hidden">这一天还没有训练记录<br>从下面点选动作添加吧 💪</div>
+
+      <div class="card add-card">
+        <h2 class="card-title">新增训练</h2>
+
+        <div class="field">
+          <label class="field-label">训练部位</label>
+          <div id="body-part-chips" class="chips"></div>
+        </div>
+
+        <div class="field">
+          <label class="field-label" for="exercise-search">动作（点选即可，也可以搜索）</label>
+          <input id="exercise-search" type="text" class="search-input" placeholder="搜索动作，例如：卧推 / 深蹲 / 划船" autocomplete="off">
+          <div id="exercise-picker" class="picker"></div>
+          <input id="exercise-name" type="text" placeholder="也可以直接输入自定义动作名" list="exercise-suggestions" autocomplete="off">
+          <datalist id="exercise-suggestions"></datalist>
+        </div>
+
+        <div class="field">
+          <label class="field-label">填写组数（重量 × 次数 × 组数）</label>
+          <div class="quick-set-grid">
+            <label>重量(kg)<input id="set-weight" type="number" inputmode="decimal" step="0.5" min="0" placeholder="0"></label>
+            <label>次数<input id="set-reps" type="number" inputmode="numeric" step="1" min="1" placeholder="10"></label>
+            <label>组数<input id="set-count" type="number" inputmode="numeric" step="1" min="1" max="20" value="1"></label>
+          </div>
+          <div id="prefill-hint" class="hint-small"></div>
+          <button id="add-to-draft" type="button" class="ghost-btn">＋ 添加到本次训练</button>
+          <div id="draft-sets" class="set-chips"></div>
+        </div>
+
+        <button id="save-exercise" type="button" class="primary-btn">保存动作</button>
+      </div>
+    </section>
+
+    <!-- ========== 历史 ========== -->
+    <section id="view-history" class="view">
+      <h2 class="section-title">训练历史</h2>
+      <div id="history-list"></div>
+    </section>
+
+    <!-- ========== 统计 ========== -->
+    <section id="view-stats" class="view">
+      <div class="stat-cards">
+        <div class="stat-card"><div class="stat-num" id="stat-days">0</div><div class="stat-label">训练天数</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-sets">0</div><div class="stat-label">总组数</div></div>
+        <div class="stat-card"><div class="stat-num" id="stat-volume">0</div><div class="stat-label">总容量</div></div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">重量趋势</h2>
+        <div class="field">
+          <label class="field-label" for="stats-exercise">选择动作</label>
+          <select id="stats-exercise"></select>
+        </div>
+        <label class="toggle">
+          <input type="checkbox" id="use-1rm"> 显示估算 1RM（单次最大重量）
+        </label>
+        <div class="chart-wrap"><canvas id="line-chart"></canvas></div>
+      </div>
+      <div class="card">
+        <h2 class="card-title">每周总容量（kg）</h2>
+        <div class="chart-wrap"><canvas id="bar-chart"></canvas></div>
+      </div>
+    </section>
+
+    <!-- ========== 设置 ========== -->
+    <section id="view-settings" class="view">
+      <div class="card">
+        <h2 class="card-title">安装到手机</h2>
+        <p class="hint" id="install-hint"></p>
+        <button id="install-btn" class="primary-btn" hidden>安装到主屏幕</button>
+      </div>
+      <div class="card">
+        <h2 class="card-title">数据备份</h2>
+        <p class="hint">数据保存在<b>当前手机浏览器的本地存储</b>中，卸载应用或清除浏览器数据会丢失，请定期导出备份。</p>
+        <button id="export-btn" class="primary-btn">导出数据（JSON 备份）</button>
+        <label for="import-file" class="ghost-btn file-label">导入备份数据<input id="import-file" type="file" accept=".json,application/json" hidden></label>
+        <button id="clear-btn" class="danger-btn">清空全部数据</button>
+      </div>
+      <div class="card">
+        <h2 class="card-title">关于</h2>
+        <p class="hint">版本 <b id="app-version">v2.0</b> · 动作库 <b id="lib-count">0</b> 个动作</p>
+        <button id="check-update" class="ghost-btn">检查更新</button>
+      </div>
+      <div class="card">
+        <h2 class="card-title">使用说明</h2>
+        <ol class="guide">
+          <li>打开应用，顶部会显示你的<b>常练动作</b>，点一下就把上次的重量、组数记到当天，完全不用打字。</li>
+          <li>想换动作：在「新增训练」里选部位 → 点动作名（可搜索），重量和次数会自动带入上次的值，直接点保存。</li>
+          <li>同一个动作练多组不同重量时，用「添加到本次训练」逐组添加。</li>
+          <li>「复制上次训练到这一天」可以把上一次的训练整套搬过来，适合固定计划。</li>
+          <li>动作名旁边的 ☆ 点一下会固定到常用；想加自己的动作，编辑文件夹里的 exercises.js 即可。</li>
+        </ol>
+      </div>
+    </section>
+  </main>
+
+  <nav class="tab-bar">
+    <button class="tab active" data-view="record"><span class="tab-ico">🏋️</span>记录</button>
+    <button class="tab" data-view="history"><span class="tab-ico">📅</span>历史</button>
+    <button class="tab" data-view="stats"><span class="tab-ico">📊</span>统计</button>
+    <button class="tab" data-view="settings"><span class="tab-ico">⚙️</span>设置</button>
+  </nav>
+
+  <div id="toast" class="toast" role="status"></div>
+
+  <div id="modal-backdrop" class="modal-backdrop hidden">
+    <div class="modal" role="dialog" aria-modal="true">
+      <h2 id="modal-title" class="card-title">编辑动作</h2>
+      <div class="field">
+        <label class="field-label" for="modal-exercise">动作名称</label>
+        <input id="modal-exercise" type="text" placeholder="动作名称">
+      </div>
+      <div class="field">
+        <label class="field-label" for="modal-body-part">训练部位</label>
+        <select id="modal-body-part">
+          <option>胸</option><option>背</option><option>肩</option><option>腿</option><option>臀</option>
+          <option>手臂</option><option>核心</option><option>全身</option><option>有氧</option><option>其他</option>
+        </select>
+      </div>
+      <div class="field">
+        <label class="field-label">组数（重量 × 次数）</label>
+        <div id="modal-sets"></div>
+        <button id="modal-add-set" type="button" class="ghost-btn">＋ 添加一组</button>
+      </div>
+      <div class="modal-actions">
+        <button id="modal-cancel" type="button" class="ghost-btn">取消</button>
+        <button id="modal-save" type="button" class="primary-btn">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="exercises.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>

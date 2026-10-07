@@ -1,0 +1,8 @@
+{
+  "appId": "com.gymlog.app",
+  "appName": "健身记录",
+  "webDir": "www",
+  "android": {
+    "allowMixedContent": false
+  }
+}
